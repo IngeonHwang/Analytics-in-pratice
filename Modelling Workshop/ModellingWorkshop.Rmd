@@ -1,0 +1,227 @@
+---
+title: "Modelling Workshop"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
+```
+
+In this exercise, we will practise some of the modelling techniques in R. Mainly, we will implement the following steps:
+
+- Partition the dataset into training and test sets.
+- Identify the important attributes to predict the target variable.
+- Implement a decision tree and a SVM model for prediction.
+
+Our aim is to predict whether an e-mail is spam or not. We will use **spambase.csv** dataset downloaded from [UCI Machine Learning Repository](http://archive.ics.uci.edu/ml/index.php) to build our model. Let's first load the required packages and import our data. Then, check the dataset using function `str()`.
+
+```{r  message=FALSE}
+
+
+library(FSelector)  #FSelector package is for Feature Selection
+
+library(tidyverse)
+
+# Import spambase.csv and assing it to mydata
+mydata <- read_csv('spambase.csv')
+
+# Display the structure of the data file
+
+str(mydata)
+```
+
+This dataset includes 32 features and 4601 observations (records). The features designated as "freq_XYZ" show the percentage of words in the e-mail that match string XYZ. The features starting with "length_" are related to the uninterrupted sequences of capital letters in the email. The last feature named "class" shows whether an email is spam (1) or not (0).
+
+***
+
+**Task 1**
+
+Let's explore the dataset and partition the data into training and test sets.
+
+* Check the measurement level of the target variable. If it is not a factor, use `as.factor()` function to save the target variable as factor.
+
+```{r  message=FALSE}
+
+# Save the target variable as factor if necessary
+mydata$class <-as.factor(mydata$class)
+
+```
+
+* Split the dataset into the training and test sets by using `sample.split()` function. 70% of the data should be allocated to training set and the remaining should be allocated to the test set. In order to use `sample.split()` function, we need to load `caTools` package.
+
+    Before splitting the data, we need to make sure that our code is reproducible. We should set a seed for R's random number generator to guarantee that our training and test sets will not change when we re-run the code. Set a seed of 123 using the `set.seed()` function.
+
+
+```{r  message=FALSE}
+
+# Load caTools package
+library(caTools) 
+
+#Set a seed of 123 
+ set.seed(123)
+
+#Generate a vector split
+split <- sample.split(mydata$class, SplitRatio = 0.7) 
+
+# Create training set: training_set
+training_set <- subset(mydata, split == TRUE) 
+
+# Create test set: test_set
+test_set <- subset(mydata, split == FALSE) 
+
+
+```
+
+*** 
+
+**Task 2**
+
+* Use function `information.gain()` to find the information gain of all attributes. Use training set data to determine information gain. Assign results to *att_weights*.
+
+```{r message=FALSE}
+
+# Use function information.gain 
+att_weights <- information.gain(class~., training_set)
+
+```
+
+* Use function `cutoff.k()` to return the most informative 15 attributes.
+Assign these attributes to variable *filtered* and print the values.
+
+```{r message=FALSE}
+
+# Use cutoff.k() to find the most informative 15 attributes. 
+filtered <- cutoff.k(att_weights, 15)
+
+# Print filtered attributes
+
+print(filtered)
+```
+
+* Select a subset of the dataset using *filtered* attributes and assign the result to *subset_data*. 
+* As you will see, *subset_data* does not include feature "class" (our target variable). Add this feature to *subset_data*.
+
+```{r message=FALSE}
+
+# Select filtered attributes
+subset_data <- training_set[filtered]
+
+# Add class column to the subset_data
+subset_data$class <- training_set$class
+ 
+```
+
+***
+
+**Task 3**
+
+We are ready to build our predictive models and predict whether an email is spam or not.
+
+**Decision Tree** :
+We will build another decision tree model in this exercise. In R, `tree` library is used to construct classification and regression trees. We need to load this library before starting to modelling.
+
+```{r message=FALSE}
+
+# Install tree package
+install.packages("tree")
+
+# Load tree library
+library(tree)
+
+```
+
+
+* Use `tree()` function to fit a classification tree in order to predict class of an e-mail. Assign the model to *tree_spam*. The basic syntax of `tree()` function is as follows:
+
+      tree(target~.,data)
+    
+* Use `summary()` function to list the features that are used in the tree, the number of terminal nodes, and the (training) error rate.
+
+```{r message=FALSE}
+
+# Build the decision tree by using tree() function
+tree.spam <- tree(class~., subset_data)
+
+# Display the summary of your model
+summary(tree.spam)
+
+```
+
+
+* Plot the decision tree with the `plot()` function and use `text()` function to display the node labels. Add a second argument to `text()` function `pretty=0` to display the category names.
+
+```{r message=FALSE}
+
+# Plot the decision tree
+plot(tree.spam)
+
+# Use text(modelname, pretty = 0) to display the node labels. The argument pretty = 0 instructs R to show the category names
+text(      , pretty = 0)
+
+```
+
+* Use `predict()` function to predict the spam class in the test data. The syntax of `predict()` function for `tree()` model is as follows:
+
+      predict (modelname, testdata ,type = "class")
+
+  The argument `type="class` instructs R to return the actual class prediction.
+    
+    ```{r message=FALSE}
+
+# Predict the class of emails in test set
+tree_predict = predict(tree.spam, test_set, type = "class")
+
+# Copy test data to results
+results <- test_set
+    
+# Add predictions to the results
+results$tree <- tree_predict
+
+```
+
+**SVM** : 
+
+First, load `e1071` package and start to work on SVM model.
+
+```{r  message=FALSE}
+
+# Load package e1071
+library(e1071)
+
+```
+
+* Build an SVM model using *subset_data*. Use all attributes in *subset_data*. Set the `kernel = "radial"`. Call this model *svm_spam*.
+
+* Predict e-mail classification (spam or not) for the test data.
+
+```{r  message=FALSE}
+
+# Build an SVM model by using svm() function
+svm_spam  <- svm(class ~. , data = subset_data, kernel = "radial", scale = TRUE)
+
+# Predicting the Test set results 
+svm_predict = predict(svm_spam, test_set)
+
+# Add predictions to the dataframe results
+results$svm <-  svm_predict
+  
+view(results)
+```
+
+* Compare correct predictions obtained by these two models.
+
+```{r  message=FALSE}
+
+# Find the correct predictions for decision tree
+correctTree <- which(test_set$class == results$tree)
+
+# Return the total number of correct predictions
+length(correctTree)
+
+# Find the correct predictions for SVM
+correctSVM <- which(test_set$class == results$svm)
+
+# Return the total number of correct predictions
+length(correctSVM)
+
+```
