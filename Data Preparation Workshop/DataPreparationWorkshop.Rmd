@@ -1,0 +1,193 @@
+---
+title: "Data Preparation Workshop"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
+```
+
+In this workshop, we will practise data partitioning and balancing techniques. Let's first load the required packages and import our dataset **CreditDefault.csv**. This data file was downloaded from [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/statlog+(german+credit+data)).
+The data contains information on loans obtained from a credit agency.
+Use `read.csv()` function to import the dataset. 
+
+```{r  message=FALSE}
+
+# Load tidyverse package
+library(tidyverse)
+
+# Load caTools package for data partitioning
+library(caTools) 
+
+# Load ROSE package for data balancing
+library(ROSE) 
+
+# Import our data and save it to variable creditdf
+creditdf <- read.csv("CreditDefault.csv")
+
+```
+
+***
+
+Let's explore the data file. View the first three rows of the dataset.
+
+```{r  message=FALSE}
+
+# View the first three rows with head()
+head(creditdf, 3)  
+
+```
+
+The data file contains information of 1000 loan applicants such as credit history, loan amount, loan duration in months, purpose of the loan  etc. The target feature is located at the last column "default" and shows the applicants' default status. This column indicates whether the loan applicant is went into default (Yes) or not (No).
+
+1. Check the structure of the dataset. Are the data types (or measurement levels) correct?
+
+2. Check the summary of the dataset. Are there any missing values? 
+
+```{r  message=FALSE}
+
+# Check the structure of the variables in the dataframe by using str() function
+str(creditdf)
+
+# Check the summary of the dataframe
+summary(creditdf)
+names(creditdf)
+view(creditdf)
+
+```
+
+3. Loan application reasons are recorded in "purpose" column. Data science team notices that some entries were recorded as "car0" instead of "car". Correct this error by first finding those entries and then, replacing them with the correct level "car".
+
+```{r  message=FALSE}
+
+# Find the indices of car0 entries in purpose column and assign these indices to index_error
+index_error <- which(creditdf$purpose == "car0")  
+
+# Correct the data entry error
+creditdf$purpose[index_error] = "car"
+
+```
+
+Since "purpose" feature is a factor variable, do not forget the update levels after correcting the data entry errors.
+
+```{r  message=FALSE}
+
+# Update the levels in purpose column by using factor() function
+creditdf$purpose <- factor(creditdf$purpose)
+
+# Check the summary of the updated dataset
+summary(creditdf)
+
+```
+
+Now, we are ready to partition the dataset into training and test sets. 
+
+4. Split the dataset into the training set (70%) and test set (30%)  by using `sample.split()` and `subset()` functions. Do not forget to set the seed before data partitioning.
+
+```{r  message=FALSE}
+
+# Set a seed of 10 by using set.seed() function
+set.seed(10)
+
+# Generate split vector to partition the data into training and test sets with training ratio of 0.70
+split <- sample.split(creditdf$default, SplitRatio = 0.7)   
+
+# Generate the training and test sets by subsetting the data records from actual dataset
+training <- subset(creditdf, split == TRUE) 
+
+test <- subset(creditdf, split == FALSE) 
+
+```
+
+***
+
+Next, we will balance training dataset. 
+
+5. We do not want to loose any data and hence, we want to apply oversampling technique. Balance the data with oversampling technique so that the minority class accounts for approximately 40% of the training dataset. Use `ovun.sample()` function with `method = "over"`.
+```{r  message=FALSE}
+
+# Apply oversampling technique
+oversampled <- ovun.sample(default ~., data = training, method = "over", p=0.4, seed=1)$data
+
+```
+
+***
+6. Now, try both undersampling and oversampling method by using `ovun.sample()` function with `method = "both"`. Set the proportion of minority class as 0.4.
+```{r  message=FALSE}
+
+# Apply both over and under sampling technique
+bothsampled <- ovun.sample(default ~., data = training, method = "both", p=0.4, seed=1)$data
+```
+
+***
+
+7. Compare the distribution of defaults in the initial training set with the oversampled training set and both over and under sampled training set. Use `table()` and `prob.table()` functions.
+
+Results from the initial training set:
+```{r  message=FALSE, eval = FALSE}
+library(dplyr)
+# Check the distribution of defaults in the initial training set
+table(training$default)
+
+# Check the proportion of defaults in the initial training set
+prop.table(table(training$default))
+
+```
+
+By using `barplot()` function, you can also plot the distribution of defaults as a bar chart.
+
+```{r  message=FALSE}
+
+# Use barplot() function to plot the distribution of defaults
+barplot(table(training$default), xlab= "Classes", ylab="Frequency")
+
+```
+
+
+
+Results from the oversampled training set:
+```{r  message=FALSE}
+
+# Check the distribution of defaults in the oversampled training set
+table(oversampled$default)
+
+# Check the proportion of defaults in the oversampled training set
+prop.table(table(oversampled$default))
+
+# Plot the distribution by using barplot() function
+barplot(table(oversampled$default), xlab="Classes", ylab="Frequency")
+
+```
+
+
+Results from both over and under sampled training set:
+```{r  message=FALSE}
+
+# Check the distribution of defaults in "bothsampled" training set
+table(bothsampled$default)
+
+# Check the proportion of defaults in bothsampled training set
+prop.table(table(bothsampled$default))
+
+# Plot the distribution by using barplot() function
+barplot(table(bothsampled$default), xlab="Classes", ylab="Frequency", ylim = c(0 , 500))
+
+```
+
+
+We can also balance "yes" and "no" classes in "default" column by using stratified sampling. As we discussed in the Sampling Demo, we can sample equal number of classes by setting the size in `stratified()` function. As we can see from the distribution results of the original training set, there are 175 entries corresponding to "yes" class.
+
+Let's generate a stratified sample by setting the number of records in each category as 175.
+```{r message=FALSE}
+
+# Load splitstackshape package
+library(splitstackshape)  
+
+# Undersample by using stratified() function and set the size to 175, stratify by default 
+Strf_undersample <- stratified(training, "default", 175)
+
+# Plot the distribution by using barplot() function
+barplot(table(Strf_undersample$default), xlab= "Classes", ylab="Frequency", ylim=c(0,200))
+
+```
+
