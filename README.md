@@ -1,6 +1,6 @@
 # Analytics in practice
 
-This workshop is dedicated to conveying a sense of how to structure analytic projects systematically, from understanding of the business problem over modeling up to model assessment and communication of the project's results. This workshop introduces a way of such a structure with an applied, step-by-step introduction that mixes theory and practical, hands-on implementation tasks. We will make extensive use of R programming and, for the visualisation part, will gain a working knowledge of Tableau. 
+This workshop is dedicated to conveying a sense of how to structure analytic projects systematically, from understanding of the business problem over modeling up to model assessment and communication of the project's results. This workshop introduces a way of such a structure with an applied, step-by-step introduction that mixes theory and practical, hands-on implementation tasks. I will make extensive use of R programming and, for the visualisation part, will gain a working knowledge of Tableau. 
 
 1. Introduction to data mining and CRISP-DM 
 2. Introduction to predictive modelling
