@@ -224,7 +224,5 @@ correctSVM <- which(test_set$class == results$svm)
 # Return the total number of correct predictions
 length(correctSVM)
 
-check <- change
-
 
 ```
