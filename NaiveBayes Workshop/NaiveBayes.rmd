@@ -1,0 +1,87 @@
+---
+title: "NaiveBayes"
+author: "Arne Strauss"
+output: html_document
+---
+
+
+## Classification with Naive Bayes
+
+There are various packages that implement Naive Bayes; here, we will use the package `naivebayes` package. Let us use the `titanic` dataset to experiment a bit with this method.
+
+```{r echo = TRUE, message=FALSE}
+# install.packages("naivebayes", "titanic")
+library(naivebayes)
+library(titanic)
+```
+
+First, we should explore the data a bit: we have a training dataset `titanic_train` as well as a testing set `titantic_test`. 
+
+Let's have a look at some lines of data:
+
+```{r echo=TRUE}
+knitr::kable(head(titanic_train))
+```
+
+We want to predict survival using class and sex as features. Survived, Pclass and Sex are currently treated as  numbers although they are factors, so let's correct this in both training and testing data sets. Note that you need to ensure that the data type of each field in training and testing data sets is the same, otherwise you will encounter errors when applying the `predict` function.
+
+```{r echo=TRUE}
+train <- titanic_train[, c("Survived", "Pclass", "Sex")]
+train$Survived <- factor(train$Survived, levels = c(0,1))
+train$Pclass <- factor(train$Pclass, levels = c(1,2,3))
+train$Sex <- factor(train$Sex, levels = c("male","female"))
+summary(train)
+
+test <- titanic_test[, c("PassengerId", "Pclass", "Sex")]
+test$Pclass <- factor(test$Pclass, levels = c(1,2,3))
+test$Sex <- factor(test$Sex, levels = c("male","female"))
+```
+
+Let us build a Naive Bayes model to predict survival for a given passenger. In order to demonstrate the principle, we first calculate the classifer manually.  `Survived` is our target variable, and as feature we may want to use the passenger class `Pclass`. The Naive Bayes equation is $$p(c|E) = \frac{p(E|c)p(c)}{p(E)}.$$
+For example, our evidence could be that the passenger was booked in first class $E=(Pclass="1")$ and we intend to predict survival ($c=1$). The prior probability $p(c)$ is the prevalence of survivors in the (training) population, so $p(c)=$ `nrow(subset(train, Survived == "1")) / nrow(train)`, and $p(E|c)$ is the fraction of first class passengers among survivors so $p(E|c)=$ `nrow(subset(train, Survived =="1" & Pclass == "1")) / nrow(subset(train, Survived == "1"))`. Finally, $p(E)$ is the prevalence of first class passengers in the population, so $p(E)=$ `nrow(subset(train, Pclass == "1")) / nrow(train)`.
+
+Overall, this gives us the predicted probability of a first class passenger to have survived as $P(c|E)=$ `r (nrow(subset(train, Survived == "1")) / nrow(train) * nrow(subset(train, Survived =="1" & Pclass == "1")) / nrow(subset(train, Survived == "1"))) / (nrow(subset(train, Pclass == "1")) / nrow(train))`.
+
+The package `naivebayes` takes care of these simple calculations for us. In the code below, we train a naive bayes model on the data `train` with target `Survived` by the feature `Pclass`, and then apply the resulting model to a new line of data from the testing set. The `type = "prob"` attribute returns the classification probability table (rather than the classification itself).
+``` {r warning = FALSE}
+model <- naive_bayes(Survived ~ Pclass, data = train)
+# For illustration, let us apply the predictor to a data instance of a class 1 passenger
+instance <- test[test$PassengerId == 903,]
+predict(model, newdata = instance, type = "prob")
+```
+
+As expected, this returns the same survival probability as our manual calculations above.  We can test this model on the data `titanic_test`:
+``` {r warning = FALSE}
+# Predicted probabilities of survival
+pred_prob <- predict(model, newdata = test, type = "prob")
+
+# Confusion matrix
+survival_pred <- as.numeric(pred_prob[,2] > 0.5)
+survival_actual <- titanic_gender_class_model$Survived
+table(survival_pred, survival_actual) # "Confusion matrix on holdout data")
+accuracy <- mean(survival_pred == survival_actual)
+
+sprintf("Error rate: %2.2f%%", (1 - accuracy) * 100)
+
+```
+
+
+## Build your own Naive Bayes model
+
+Use the approach above to build a model that predicts survival based on `Sex`. You should obtain the confusion matrix and error rate as shown below.
+
+``` {r warning = FALSE, echo = FALSE}
+model2 <- naive_bayes(Survived ~ Sex, data = train)
+pred_prob2 <- predict(model2, newdata = test, type = "prob")
+
+# Confusion matrix
+survival_pred2 <- as.numeric(pred_prob2[,2] > 0.5)
+table(survival_pred2, survival_actual) # "Confusion matrix on holdout data")
+accuracy <- mean(survival_pred2 == survival_actual)
+
+sprintf("Error rate: %2.2f%%", (1 - accuracy) * 100)
+
+```
+
+In summary, this method is fairly simple as far as the underpinning calculations are concerned, but for that reason it is fast and often provides good predictive performance.
+
