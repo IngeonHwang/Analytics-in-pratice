@@ -1,0 +1,147 @@
+---
+title: 'Customized Pricing: Auto lender Case'
+author: 'Arne Strauss'
+output:
+  html_document:
+    toc: yes
+    toc_depth: 1 
+    number_sections: false
+---
+
+# Background
+
+This application of customized pricing focusses on an online auto lender. The available data is real and has been provided via the Center for Pricing and Revenue Management at Columbia University. The case discussion has been adapted from Bodea & Ferguson (2014), pp. 195-210.
+
+The business model of the auto lender works as follows: a prospective customer who intends to acquire a new/used automobile and would like to finance her purchase could apply for a loan by submitting an online application via the auto lender's website. The website receives both direct and referral traffic. Upon the receipt of the application, the auto lender evaluates the credit worthiness of the applicant (i.e., the likelihood of the applicant's defaulting on her debt obligation) and provides her with an approval notice if an approval decision is granted. An approved loan application is accompanied by a customized annual percent rate (APR) that reflects such things as the amount requested, the term of the loan or the loan's perceived risk of default. Upon the receipt of the approval notice, the prospective borrower evaluates the competitiveness of the offer and decides whether or not to take up the loan during a grace period of 45 days. If the loan is not taken up during this period, the prospective customer is recorded as lost in regard to this particular loan application.
+
+One of the critical profit decisions the auto lender needs to make relates to what APR to quote the prospective borrower. High APR leads to high profits; in general, however, a high APR is typically associated with a relatively low win probability. To satisfy this trade-off, the auto lender can optimize how it computes the quoted APRs so as to maximize its expected profits. 
+
+The expected profit function is $\pi(APR) = \rho(APR │X_{i,k} )  \Pi(APR, PR_i, Amount_i, Term_i, POP, LGD)$,
+where $X_{i,k}$ are some $k$ attributes that intrinsically describe loan application $i$ (e.g. $Amount_i$, $Term_i$); $\rho(APR │X_{i,k})$ is the take-up probability conditional on the loan attributes $X_{i,k}$ (i.e., the bid-response function as discussed in class); $\Pi(\cdot)$ is the auto lender’s expected profit assuming that the applicant accepts the loan; $PR_i$ is the prime rate in effect at the time loan application $i$ is approved; $Amount_i$ and $Term_i$ are the amount approved and the term approved, respectively; $POP$ is the probability of payment; and $LGD$ is the loss given default expressed as a probability. For a typical financial institution, the expected profit $\Pi(\cdot)$ is often expressed as:
+
+\begin{align}
+\Pi(APR, \ldots) = & POP \cdot Amount_i \cdot Term_i \cdot 
+  \Big( \frac{APR/12}{1-(1+APR/12)^{-Term_i}} - \frac{PR_i/12}{1-(1 + PR_i/12)^{-Term_i}} \Big) - 
+  (1 - POP) \cdot LGD \cdot Amount_i,
+\end{align}
+
+where $Amount_i Term_i ((APR/12)/(1-(1+APR/12)^{-Term_i} ))$ provides the borrower’s total payment over the full term $Term_i$ (expressed in months) of the loan amounting to $Amount_i$, and the term involving the price rate represents the cost to the lender for the line of credit obtained e.g. from a commercial bank, and $(1-POP)$ is the probability of default. For the subprime auto-loan industry , assume average values for the probability of default $(1-POP)$ and the loss given default $LGD$ are 10% and 25%, respectively.
+For any approved loan application, we know all terms in the expected profit function expect for the take-up probability $\rho(APR | X_{i,k})$. This bid-response function is unknown at the level of individual loan application $i$, but could be inferred at the customer segment level that loan application $i$ belongs to. These segment-level bid-response functions shall be modeled as logit functions and estimated from the available historic data. Once we have $\rho(\cdot)$, we then can easily maximize $\pi(APR)$ so as to obtain the optimal $APR$ to quote to a given application $i$.
+
+
+Let us start by loading some packages that we will need in the course of this project. Also, I have already done some data cleaning and other pre-processing for analysis; the resulting training and testing data sets can be readily loaded into the R environment.
+
+```{r message = FALSE}
+# Load required packages
+library(ggplot2)
+library(Rsolnp) # for optimisation
+# Load the pre-processed training and testing data sets (80%-20% split)
+load("CarLoanTrain.RData")
+load("CarLoanTest.RData")
+```
+
+
+# Multivariate Logistic Regression Model
+
+In order to solve the dynamic pricing problem, we first need to obtain the win-probability function given a certain interest rate that we quote and given characteristics of the request, the customer and the channel. 
+
+**Task 1**: Let us use multivariate logistic regression. Since our target is binary, you should set `family = binomial(link = "logit")` in the `glm` function. Note that you should run this only on the training data `train`. As predictors, try the customer's tier, car type, source of application (`partnerbin`), term, region, FICOH, logarithm of amount, and the actual interest rate `APR` that we historically quoted. Save the model as `logitModel` and use the `coef` function to display its coefficients.
+
+```{r echo= TRUE}
+# Run multivariate logistic regression model
+# Your code here
+
+# Print coefficients
+# Your code here
+
+```
+
+
+
+# Bid-Response Curve for Given Segment
+
+Every combination of levels for the categorical variables can be interpreted as a segment: for example, one segment is defined by Tier 2, Region 3, Partner 1, Term 60, and CarType Used. Let's plot how the bid-response curve looks like for this segment for a given amount (say logamount 10.09721, corresponding to `r sprintf("$%6.0f", exp(10.09721))`), and FICOH of 0.0595, over a range of interest rates APR (you do not need to implement the code yourself now).
+
+```{r echo = TRUE, eval=FALSE}
+# Plot bid-response curve for specific new loan request at different interest rates (APR)
+sample <- data.frame(Tier = as.factor(rep(2,30)), 
+                     Region = as.factor(rep(3,30)), 
+                     partnerbin = as.factor(rep(1, 30)), 
+                     Term = as.factor(rep(60, 30)), 
+                     CarType = as.factor(rep("U", 30)), 
+                     logamount = rep(10.09721, 30), 
+                     FICOH = rep(0.0595, 30), 
+                     APR = seq(from = 0.01, to = 0.3, by = 0.01))
+```
+
+**Task 2**: Predict the win probabilities for this `sample` data using our logit model `logitModel`. To do so, we use the `predict` function with argument `type = "response"`. Save these predicted probabilities in a vector `p`.
+
+```{r echo = TRUE, eval=FALSE}
+# Your code here
+```
+
+Then we can plot the win probability function:
+
+```{r echo = TRUE, eval=FALSE}
+plotData <- data.frame(prob = p, APR = seq(from = 0.01, to = 0.3, by = 0.01))
+ggplot(plotData, aes(x = APR, y = p)) + 
+  geom_line() + 
+  labs(x = "APR", y = "Win probability", title = "Bid-response curve for given segment and fixed logamount and FICOH score")
+```
+
+
+# Implementation
+
+We want to deploy this model to make automated pricing decisions as soon as a new request comes in. To illustrate this, let's say a new request is coming in that looks like the one mentioned above.
+
+```{r echo = TRUE, eval=FALSE}
+# Consider new request arrives. 
+newreq <- data.frame(Tier = as.factor(2), 
+                     CarType = as.factor("U"), 
+                     partnerbin = as.factor(1), 
+                     Term = as.factor(60), 
+                     Region = as.factor(3), 
+                     FICOH = 0.0595, 
+                     logamount = 10.09721)
+```
+
+We need to solve the optimisation problem stated above to determine which interest rate APR we should quote to the request. Let us assume that the probability of payment POP is 0.9, loss given default LGD is 0.25, and the prime rate in effect at the time the loan application is approved is 1.81\%. We implement the objective function as defined above: $\max_{APR}  \pi(APR) = \max_{APR} \rho(APR │X_{i,k} )  \Pi(APR, PR_i, Amount_i, Term_i, POP, LGD)$.
+
+
+```{r echo=TRUE, eval=FALSE}
+# Objective function
+objfun <- function(apr, newreq, logitModel) {
+  pop <- 0.9
+  lgd <- 0.25
+  pr <- 0.0181
+  amount <- exp(newreq$logamount)
+  term <- as.numeric(levels(newreq$Term)[as.numeric(newreq$Term)])
+  # Win probability at rate apr
+  prob <- predict(logitModel, newdata = data.frame(c(newreq, APR = apr)), type = "response" )
+  profit <- pop * amount * term * ((apr / 12) / (1 - (1 + apr/12)^(-term)) - (pr / 12)/(1 - (1 + pr/12)^(-term))) - (1 - pop)*lgd*amount
+  return(-prob * profit)
+}
+
+# Arbitrary starting value
+apr = 0.03
+result = gosolnp(pars = apr, fun = objfun, LB = 0, UB = 1, n.sim = 2000, newreq = newreq, logitModel = logitModel)
+sprintf("We should charge an APR of %2.2f%%", result$pars * 100)
+```
+
+The objective function looks like this:
+
+```{r echo = TRUE, eval=FALSE}
+# Plot expected profit
+apr <- seq(from = 0.005, to = 0.3, by = 0.005)
+expprofit <- rep(0, length(apr))
+for (i in 1:length(apr)) {
+  expprofit[i] <- -objfun(apr[i], newreq, logitModel)
+}
+
+ggplot(data.frame(APR = apr, profit = expprofit), aes(x = APR, y = profit)) +
+  geom_line() +
+  labs(x = "APR", y = "Expected profit") + 
+  geom_vline(xintercept = result$pars) +
+  scale_x_continuous(breaks = seq(from = 0.05, to = 0.3, by = 0.05))
+```
+
