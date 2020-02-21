@@ -1,0 +1,211 @@
+---
+title: "PWC_bibitor_case study"
+output: html_document
+---
+
+```{r nikos, include=FALSE}
+# knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+library(dplyr)
+library(tidyr)
+library(RSQLite)
+```
+
+# Inspecting the Data 
+
+```{r inspection}
+
+
+purchase_prices <- read.csv("../bibitor/2017PurchasePricesMara.csv",
+                            stringsAsFactors = FALSE)
+
+library(dplyr)
+glimpse(purchase_prices)
+
+
+library(readr)
+
+purchase_prices <- read_csv("../bibitor/2017PurchasePricesMarcsv.zip")
+
+dplyr::glimpse(purchase_prices)
+
+
+```
+
+
+
+#Setup Bibitor SQLite 
+
+```{r bibitorsqlite}
+
+conn <- dbConnect(RSQLite::SQLite(), "../sqlite/bibitor.db")
+
+```
+
+
+
+#Bibitor Data
+```{r bibitor}
+#check if we have any tables 
+dbListTables(conn)
+#So no tables yet
+#lets read a table to checkout together
+library(readr)
+
+purchase_prices <- readr::read_csv("../bibitor/2017PurchasePricesMarcsv.zip")
+
+glimpse(purchase_prices)
+
+# push this table to the SQLite database
+
+dbWriteTable(conn,"purchase_prices",purchase_prices,overwrite = T)
+dbListTables(conn)
+```
+
+
+```{r load_other_datatables}
+beginv <- read_csv("../bibitor/BegInvFINAL12312016csv.zip")
+endinv <- read_csv("../bibitor/EndInvFINAL12312016csv.zip")
+invoice_purchases <- read_csv("../bibitor/InvoicePurchases12312016csv.zip")
+purchases_final <- read_csv("../bibitor/InvoicePurchases12312016csv.zip")
+
+
+```
+
+```{r writedataframestodatabase}
+
+dbWriteTable(conn,"beginv",purchase_prices)
+dbWriteTable(conn,"endinv",purchase_prices)
+dbWriteTable(conn,"invoice_purchases",purchase_prices)
+dbWriteTable(conn,"purchases_final",purchase_prices)
+
+dbListTables(conn)
+
+
+```
+
+```{r getsalesdata}
+
+sales_data <- read_csv("../bibitor/SalesFINAL12312016csv.zip")
+
+```
+
+```{r sqlonbibitor}
+
+# Which are the most expensive items
+result <- dbGetQuery(conn,"SELECT Brand,Description,Price FROM purchase_prices ORDER BY Price DESC LIMIT 10")
+
+
+
+```
+
+```{r dosomethingwithresult}
+
+library(ggplot2)
+dbGetQuery(conn,"SELECT Brand,Description,Price FROM purchase_prices ORDER BY Price DESC LIMIT 100") %>% 
+  ggplot(.,aes(x=reorder(factor(Brand),Price),y=Price))+geom_bar(stat="identity")
+
+```
+
+#Load other datafiles 
+
+```{r loadfiles}
+
+all_files <- list.files("../bibitor2/",pattern = ".zip")
+
+all_file_contents <- data.frame()
+
+for(f in 1:length(all_files)){
+   this_file <- all_files[f]
+   this_file_path <- paste0("../bibitor2/",all_files[f])
+   this_file_contents <- read_csv(this_file_path)
+   this_file_contents$filename <- this_file
+   
+   all_file_contents <- rbind(all_file_contents,this_file_contents)
+   print(nrow(all_file_contents))
+}
+
+dbWriteTable(conn,"all_purchase_prices",all_file_contents,overwrite  = T)
+
+
+```
+
+# Fetching 
+
+
+```{r}
+mean(all_file_contents$Price)
+sd(all_file_contents$Price)
+# winsorize to value mu+sd
+all_file_contents_winsorised <- dbGetQuery(conn,"SELECT * FROM all_purchase_prices WHERE Price < 266 ")
+
+```
+
+
+
+# Challenge: Add new row on the database using SQL 
+
+# Challenge: Update price for Brand 58 and 75
+
+# Adding new values 
+
+
+# Load all different files together 
+
+```{r loadfiles}
+
+purchase_files <- list.files("../bibitor2/")
+
+all_purchases <- data.frame()
+
+for(i in 1:length(purchase_files)){
+  this_filename <- purchase_files[i]
+  print(paste("Reading for file",this_filename))
+  this_filename <- paste0("../bibitor2/",this_filename)
+  this_dataframe <- read_csv(this_filename)
+  
+  this_dataframe$time_period <- purchase_files[i]
+  
+  all_purchases <- rbind(all_purchases,this_dataframe)
+}
+
+
+
+```
+
+
+# Load all bibitor transactions 
+```{r loadallbibitor}
+
+files_h <- list.files("../bibitor2/")
+
+#method one 
+#collect all data in a dataframe
+all_values <- data.frame()
+for(i in 1:length(files_h)){
+  print(paste("reading for",files_h[i]))
+  # now we need to be able to construct the directory
+  purchase_price_h <- readr::read_csv(paste0("../bibitor2/",files_h[i]))
+  all_values <- rbind(all_values,purchase_price_h)
+  
+}
+
+
+
+```
+
+
+```{r postcheck}
+# We want the maximum brands 
+complete_brands <- all_values %>% group_by(Brand,Description) %>% summarise(total =n()) %>% filter(total ==14) 
+
+```
+
+
+# Disconnecting 
+```{r disconnect}
+
+dbDisconnect(conn)
+
+```
+
