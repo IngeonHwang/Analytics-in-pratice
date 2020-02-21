@@ -1,0 +1,790 @@
+---
+title: "다양한 함수 연습기(기본)"
+author: "extract_text_from_pdf"
+date: "14/02/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+data(mtcars)
+mtcars
+str(mtcars)
+
+tb = as_tibble(mtcars)
+head(tb)
+
+
+tb[2:5,]
+
+tb[,2:5]
+
+dt = as.data.frame(mtcars)
+dt[2:5,]
+dt[,2:5]
+
+
+```
+
+
+```{r}
+tb %>% select(c(cyl, hp)) # select 에서는 "" 생략해도됨
+tb %>% select(-cyl, -qsec)
+tb %>% select(-contains("c"))
+
+ # dplyr 함수
+tb %>% select(starts_with("dis"))
+tb %>% select(ends_with("ec"))
+tb %>% select(contains("ea"))
+
+# 정규 표현식
+tb[, grep('^dis' ,colnames(tb))]  # grep : Pattern Matching and Replacement
+tb[, grep('ec$', colnames(tb))] 
+tb[, grep('c', colnames(tb))]
+
+dt[, grep('^dis' ,colnames(tb))]
+dt[, grep('ec$', colnames(tb))]  
+dt[, grep('c', colnames(tb))]
+
+
+g <- grep("iconHomicideShooting", homicides)
+```
+grep(), grepl(): These functions search for matches of a regular expression/pattern in a character vector. grep() returns the indices into the character vector that contain a match or the specific strings that happen to have the match. grepl() returns a TRUE/FALSE vector indicating which elements of the character vector contain a match
+
+```{r}
+mtcars.names = rownames(mtcars)
+mtcars.names
+
+mtcars.names = gsub("Merc", "Mercedes", mtcars.names)
+mtcars.names
+
+# Get ‘mystring’ as outlined below
+mystring = "Gabriel-Henry.Tedd.-John (Yorkshire)"
+
+# replace the dot (.) with a space.
+gsub(".", " ", mystring, fixed = T)
+gsub("\\.", " ", mystring)
+gsub("[.]", " ", mystring)
+
+# delete the brackets including its content: ‘(Yorkshire)’
+gsub(" *\\([^)]*)", "", mystring)
+
+```
+
+sub(), gsub(): Search a character vector for regular expression matches and replace that match with another string
+
+
+regexpr(), gregexpr(): Search a character vector for regular expression matches and return the indices of the string where the match begins and the length of the match
+
+
+```{r}
+ # dplyr 함수
+tb %>% arrange(cyl, desc(qsec))
+
+
+ # 정규 표현식
+tb[order(tb$cyl),]
+tb[order(tb$cyl, decreasing = T),]
+
+tb %>% summarise(mean(hp))
+tb %>% summarise(V1 = mean(hp))
+tb %>% summarise(hpMean = mean(hp), qsecMedian = median(qsec))
+
+
+tb %>% summarise(v1 = mean(hp), v2= median(tb$qsec), v3 = v1+v2)
+dt %>% summarise(v1 = mean(hp), v2= median(tb$qsec), v3 = v1+v2) 
+
+str(tb)
+tb$am <- as.factor(tb$am)
+
+# 집단별 요약
+tb %>% 
+  group_by(am) %>% 
+  summarise(mean(qsec))
+
+mtcars %>% 
+  group_by(cyl) %>%
+  summarise(disp = mean(disp),hp = mean(hp)) # 오잉? 안먹힐때가 있다 왜? dply 의 summarise 아닌 plyr의 summarise 적용되서 그럼 
+
+
+mtcars %>% 
+  group_by(cyl) %>%
+  dplyr::summarise(disp = mean(disp),hp = mean(hp))  # 그럴땐 dplyr::summarise 이렇게 이용해줘야함. dplyr에 있는 summarise 쓸게
+
+  
+
+```
+
+```{r}
+# 팩터형 뎅이터 전처리 - factor 형의 데이터들은 문자열 형으로 유지하다가 분석 직전에 팩터형으로 변환하는게 좋다
+
+fac1 <- factor(c("a","b","b","a"))
+fac2 <- factor(c("a","b","c","c","b"))
+
+c(fac1,fac2) # 오잉? 뭔가 이상하다. 왜냐면 팩터형 데이터 내부적으로 정수료 표기되기 때문이다
+
+# 문자열로 바꾼다음에 전처리 하는 방법
+str1 <- c("a","b","b","a")
+str2 <- c("a","b","c","c","b")
+
+c(str1,str2)
+
+
+# 또는 forcats패키지 이용해서 해결
+library(forcats)
+fct_relevel() # 수준의 순서를 지정할 수 있다
+fct_reorder()
+fct_reorder2()
+
+# 팩터의 범주 이름을 바꾸고 싶다면 : fct_recode()
+animal <- c("d", "c", "m", "p")
+animal_name <- fct_recode(animal, "dog"="d", "cat"="c", "monkey"="m", "puppy" = "p")
+
+# 비슷한 범주를 모아 한 범주로 묶고 싶으면 : fct_collapse()
+animal_collpase <- fct_collapse(animal_name, 
+                                "dog" = c("dog", "puppy"))
+animal_collpase
+
+
+x <- "aaabbb"  
+sub("a", "c", x)  # Apply sub function in R
+
+```
+
+```{r}
+# 집합 연산 
+
+union(a,b) # 합집합
+intersect(a,b) # 교집합
+setdiff(a,b) # 차집합
+
+setequal(a,b) # 두 집합이 같은지 다른지 체크하가
+
+
+
+# 백터의 내용 출력
+vInteger <- as.integer(1:35)
+vReal1 <- rnorm(10); vReal2 <- c(1.2475842, 1.43, 1024033211)
+vCharacter <- c("안녕?\n또 보다니!", "Hi, \tWait a moment", "오랜만이야?\t!", "long time no see!", "...")
+vFactor <- factor(c('hi', 'mid', 'low', 'low' , 'mid'),
+                  levels = c('hi', 'mid', 'low'))
+vDate <- as.Date(c("2017-06-14", "2019-03-01"))
+vPOSIXct <- as.POSIXct(c("2017-06-14", "2019-03-01"))
+
+
+print(vInteger)
+print(vReal1)
+print(vReal2)
+print(vCharacter)
+
+cat(vCharacter) # 문자 벡터의 경우 Print 함수는 문자열을 따옴표 안에 보여준다. 이 경우 제어 문자 등의 존재를 쉽게 알 수 있다
+# 하지만 실제 출력 결과를 알기 힘들다. 이럴때 cat 함수 사용.
+
+print(vFactor)
+print(vDate)
+print(vPOSIXct)
+```
+
+```{r}
+dat1 = data.frame(name = c("Kim","Lee"), 
+                 age = c(23,41),
+                 height = c(180, 160))
+dat2 <- dat1
+
+dat1[1,] <- c("Lee", 30,170) ; data
+dat2[1,] <- list("Lee", 30,170) ; data
+
+dat1$age # 여기서 age 값인 30은 문자열이 되었다. 벡터는 동일한 자료형에서 원소를 모아놓은 것이고, 문자와 숫자 혼재시 문자형됨
+dat2$age
+
+```
+
+### 빅데이터 (용량이 큰 텍스트 데이터 파일을 읽을 때)
+```{r}
+readr::read_delim(file = , delim= , con_names = )
+data.table::fread(file= , sep = , header = )
+
+# 용량이 큰 ㄷ텍스트 파일을 read.table로 읽으려면 시간이 너무 많이 걸린다. 이럴 땐 위에 코드 사용하자.
+```
+
+### 집단의 갯수가 적은 경우 - 데이터이름[집단데이터 담고 있는거 이름=="내가 계산하고싶은 집단이름"] > [g=="Male"]
+```{r}
+
+v <- c(172, 172, 170, 170, rnorm(96,170,3))
+g <- rep(c("Male", "Female"), 50)
+c(mean(v[g=="Male"]), mean(v[g == "Female"]))
+
+
+```
+
+### 집단의 갯수가 많은 경우
+```{r}
+set.seed(0)
+v <- rnorm(1000, 170,3)
+g <- rep(1:100, 10)
+c(mean(v[g==1]), mean(v[g==2]), mean(v[g ==3]), mean(v[g==4]))
+
+## 이걸 보면 어라? 그냥 for 문 사용하면 되지 않을까?? 싶지만 이미 r에는 이걸 위한 함수가 존재한다 (next)
+```
+
+### 주어진 벡터에 집단을 구분하여 함수 적용하기 : tapply
+```{r}
+# tapply 내용백터 v의 원소를 집단 백터 g를 기준으로 나눈다음에 FUN(function) 을 각 집단에 적용
+
+g = c(1,3,1,2,3,2,2,1,2)
+g = c(0.7,0,5,7,5,5,0,5)
+g = c("A", "C", "A", "B", "C", "B", "B", "A", "B")
+g = c("paul", "jack", "paul", "susan", "jack", "susan", "susan", "paul", "susan")
+
+v = c(2,2,6,8,9,1,2,7,5)
+g = c(1,3,1,2,3,2,2,1,2)
+tapply(v, g, FUN = mean)
+
+v = c(2,2,6,8,9,1,2,7,5)
+g = c(0,7,0,5,7,5,5,0,5)
+tapply(v, g, FUN = mean)
+
+v = c(2,2,6,8,9,1,2,7,5)
+g = c("A", "C", "A", "B", "C", "B", "B", "A", "B")
+tapply(v, g, FUN = mean)
+
+v = c(2,2,6,8,9,1,2,7,5)
+g = c("paul", "jack", "paul", "susan", "jack", "susan", "susan", "paul", "susan")
+tapply(v, g, FUN = mean)
+```
+
+벡터 뿐만 아니라 행렬, 리스트, 데이터 프레임에 대해서도 원소들을 여러 집단으로 나눈 후 특정한 함수를 적용할 수 있다. (내용백터 v, 집단 백터 g)
+```{r}
+dat <- data.frame(gender=c('M','M','M','M','M','F','F','F','F','F'),
+                  num=c(1,2,3,1,2,3,1,2,3,1),
+                  h=c(170,180,190,180,170,150,160,170,160,150),
+                  w=c(80,70,100,80,60,50,50,60,60,50))
+dat$BMI <- dat$w/(dat$h/100)^2
+table(dat$gender, dat$num)
+
+# tapply - tapply(v, g, func)
+tapply(dat$h, list(dat$gender, dat$num), mean)
+tapply(dat$h, list(dat$gender), mean)
+
+# aggregate - aggregate(df, by=list(), func) - 순서 lapply 랑 똑같음 : 내용백터, 집단백터
+aggregate(h~gender+num, sum, data = dat)
+
+aggregate(h+w~gender+num, sum, data = dat)
+
+aggregate(.~gender+num, sum, data = dat)
+```
+taaply : tapply(v, g, func) tag-apply [적용 대상=벡터]
+apply : apply( , 1, f) array-apply [적용 대상=매트릭스]
+lapply, sapply : lapply(1st, func) list-apply, simplified-list-apply [적용 대상=리스트],
+aggregate: aggregate(df, by=list(), func) [적용 대상=데이터프레임]
+
+*lapply()* function is useful for performing operations on list objects and returns a list object of same length of original set.
+
+*sapply()* function takes list, vector or data frame as input and gives output in vector or matrix. It is useful for operations on list objects and returns a list object of same length of original set.
+
+sapply() function does the same job as lapply() function but *returns a vector*
+
+
+```{r}
+#동일한 형식의 데이터 프레임  DF1, DF2, DF3 합치기
+rbind(DF1, DF2, DF3)
+data.table::rbindlist(list(DF1, DF2, DF3))
+
+#두 데이터에 공통으로 존재하는 열을 기준으로 두 데이터 프레임을 합칠 때
+merge(DF1, DF2)
+dplyr::left_join(DF1, DF2)
+
+# 열이름은 동일하지만 순서와 갯수가 다른 경우
+data.table::rbindlist(list(DF1, DF2), fill=TRUE)
+dplyr::bind_rows(DF1, DF2)
+
+
+```
+
+
+### merge 별다른 이야기 없으면 열이름이 동일한 모든 열을 기준으로 행을 연결한다.
+하지만 그 일부만 사용하고 싶으면 by= 를 통헤서 기준열 지정한다. 
+열 이름 달라도 걔네 기분으로 join 하고 싶으면  by.x 랑 by.y 로 지정할 수 있다. 
+```{r}
+authors <- data.frame(
+    surname = c("Tukey", "Venables", "Tierney", "Ripley", "McNeil"),
+    nationality = c("US", "Australia", "US", "UK", "Australia"),
+    retired = c("yes", rep("no", 4)))
+
+books <- data.frame(
+    name = c("Tukey", "Venables", "Tierney", "Ripley", "Ripley", "McNeil"),
+    title = c("Exploratory Data Analysis",
+              "Modern Applied Statistics ...",
+              "LISP-STAT",
+              "Spatial Statistics", "Stochastic Simulation",
+               "Interactive Data Analysis"),
+    other.author = c(NA, "Ripley", NA, NA, NA, NA))
+
+merge(authors, books, by.x="surname", by.y="name")
+merge(books, authors, by.x="name", by.y="surname")
+```
+
+### left_join
+```{r}
+authors1 <- data.frame(
+    surname = c("Tukey", "Venables", "Tierney", "Ripley", "McNeil"),
+    nationality = c("US", "Australia", "US", "UK", "Australia"),
+    retired = c("yes", rep("no", 4)))
+
+authors2 <- data.frame(
+    surname = c("Venables", "Tukey", "Tierney", "Ripley", "McNeil"),
+    nationality = c("US", "Australia", "US", "UK", "Australia"),
+    retired = c("yes", rep("no", 4)),
+    phone = c(123,456,789,135,246))
+
+dplyr::left_join(authors1, authors2)
+```
+### left_join
+```{r}
+authors1 <- data.frame(
+    surname = c("Tukey", "Venables", "Tierney", "Ripley", "McNeil"),
+    nationality = c("US", "Australia", "US", "UK", "Australia"),
+    retired = c("yes", rep("no", 4)))
+
+authors2 <- data.frame(
+    nationality = c("Korea", "Japan", "China", "Indonesia", "India"),
+    surname = c("Kim", "Lee", "Hwang", "Choi", "Kang"),
+    retired = c("yes", rep("no", 4)))
+
+rbind(authors1, authors2)
+
+
+```
+
+
+```{r}
+authors3 <- data.frame(
+    surname = c("Tukey", "Venables", "Tierney", "Ripley", "McNeil"),
+    nationality = c("US", "Australia", "US", "UK", "Australia"),
+    retired = c("yes", rep("no", 4)))
+
+authors4 <- data.frame(
+    surname = c("Venables", "Tukey", "Tierney", "Ripley", "McNeil"),
+    nationality = c("US", "Australia", "US", "UK", "Australia"),
+    retired = c("yes", rep("no", 4)),
+    phone = c(123,456,789,135,246))
+
+# rbind 의 경우 동일한 열 갯수, 동일한 변수가 동일한 열이름으로 저장되어 있으면 순서가 달라도 괜찮음
+# 위 데이터의 경우, 열의 갯수도 다르고, 동일하지 않은 변수도 하나 있어서 함수 안 먹힌다.
+rbind(authors3, authors4)
+
+# 하지만, 열의 이름은 동일하지만 순서와 갯수가 다르다면 data.table::rbindlist 를 쓰면 먹힌다
+data.table::rbindlist(list(authors3,authors4), fill = TRUE)
+```
+
+```{r}
+#install.packages(c("tidyr", "devtools"))
+#devtools::install_github("garrettgman/DSR")
+library(DSR)
+library(tidyr)
+```
+
+### spread(세로형 데이터를 가로형으로 바꾼다) 
+```{r}
+# variables : columns
+# observations : rows
+
+# spread 
+table2 <- DSR::table2
+
+spread(table2, key, value)
+
+```
+spread() returns a copy of your data set that has had the key and value columns removed. In their place, spread() adds a new column for each unique value of the key column. These unique values will form the column names of the new columns. 
+
+### gather(여러 컬럼을 하나의 컬럼으로 모은다)
+```{r}
+table4 <- DSR::table4
+gather(table4, "year", "cases", 2:3)
+
+
+table5 <- DSR::table5
+tidy_table5 <- gather(table5, "year", "population", 2:3)
+
+```
+
+### slice(행을 선택하는 slice)
+```{r}
+# 데이터 테이블에서 DT[10] 은 10번쨰 행(row)를 나타내고, 데이터 프레임에서는 10번째 열(column)나타낸다
+library(dplyr)
+library(data.table)
+
+tidy_table5
+slice(tidy_table5, 3)
+
+# data frame 의 경우 [n] n번째 열(column) 의미
+tidy_dataframe5<- as.data.frame(tidy_table5)
+slice(tidy_dataframe5, 3)
+tidy_dataframe5[3]
+
+# data table 의 경우 [n] n번째 행(row) 의미
+tidy_datattable5<- as.data.table(tidy_table5)
+slice(tidy_datattable5, 3)
+tidy_datattable5[3]
+
+# 결론 = slice 함수는 얄짤없이 전부 n 번째 열 호출한다
+
+```
+
+### slice(행을 선택하는 slice) 이라면 select (열을 선택하는 함수- 이름 또는 순번으로 선택 가능)
+```{r}
+# ROW(열)
+DF <- mtcars[2:3, ] # 데이터 프레임 (data frame)
+TB2 <- as_tibble(TB) %>% slice(2:3) # 티블(tibble)
+DT2 <- DT[2:3, ] # 데이터 테이블(data.table)
+
+# column(행)
+DF2[ , c(3, 5)]
+TB2 %>% select(c(3,5))
+
+```
+
+'mutate' in data.frame and ' := 'in data.table
+```{r}
+TB %>% mutate(wt2, hp * qsec)
+DT3[, ':='(wt = hp * qsec)]
+
+# 단, transmute 는 기존 컬럼 제외하고 새로 생성된 컬럼만 보존한다
+```
+
+
+group_by
+집단을 나누는 기준을 두 변수(am, cyl)로 하고 두 변수 (mpg, hp)의 평균을 구하고 싶다면
+```{r}
+TB <- as_tibble(mtcars, rownames = 'rn')
+
+
+DF6 <- mtcars[c(10:2), c("mpg", "cyl", "disp", "hp", "am")]
+TB6 <- TB%>% slice(10:2) %>% select(mpg, cyl, disp, hp, am)
+
+new_DF6 <- aggregate(cbind(mpg, hp) ~ am + cyl, data = DF6, FUN = mean)
+TB6  %>% group_by(cyl, am) %>% summarise(mpg = mean(mpg), hp = mean(hp))
+
+
+
+```
+
+### paste0, paste
+
+paste0, paste 경우, paste0(str1, str2)의 결과 첫 번째 원소는 벡터 str1 과 벡터 str2의 첫번째 원소를 연결
+paste0 는 두 벡터가 연결될 때 사이에 특정 문자 삽입이 불가능하다. (공란 "" 삽입)
+paste 는 두 벡터가 연결될 때 사이에 특정 문자 삽입 가능하다.(sep = 으로 가능)
+```{r}
+paste0(c("I have", "I want"), c("a car", "a cake"))
+
+paste(c("I have", "I want"), c("a car", "a cake"))
+paste(c("I have", "I want"), c("a car", "a cake"), sep = "___")
+```
+
+
+### 특정 문자열에 대한 stringr의 함수
+탐지 : str_detect()
+갯수 : str_count()
+기준으로 분리 : str_split()
+위치 정보 : str_locate()
+대체 : str_replace()
+```{r}
+library(stringr)
+patt = 'xxxxxx'
+str = c("aaaa", "bbbbb", "cccc", "xxxxxx xxxxxx, xxxx")
+str_detect(str, pattern = fixed(patt))
+str_count(str, pattern = fixed(patt))
+
+str_replace(str, pattern = fixed(patt), replacement = "yyyyyy")
+```
+
+### 정규 표현식
+```{r}
+
+```
+\d 숫자
+\D 숫자를 제외한 모든 문자
+\w 알파벳, 숫자
+\W 알파벳, 숫자를 제외한 모든 문자
+\s 공란
+\S 공란을 제외한 모든 문자
+^ [ 이후에 첫 문자로 ^로 쓰이면 [,]안의 모든 문자를 제외한 문자 집합을 의미함
+
+
+### 조건문
+```{r}
+rm(list=ls()) # 관련없는 변수 모두 삭제하기
+
+s = "here"
+
+if (s == "here") {
+  print("Seoul")
+} else {
+  print("Somewhere else than Seoul")
+}
+
+
+ifelse(s == "here",
+       "Seoul", 
+       "Somewhere else than Seoul") 
+
+ifelse(s == "there",
+       "Seoul", 
+       "Somewhere else than Seoul") 
+
+```
+
+for 반복문
+```{r}
+s = 0
+for (i in 1:10)
+  s = s + i
+print(s)
+
+
+```
+
+
+### 함수 만들기
+```{r}
+sumToN = function(n) {
+  s = 0
+  for (i in 1:n) {
+    s = s + i  }
+  print(s)
+}
+
+sumToN(10)
+```
+
+dplyr - magrittr 파이프 연산자
+. 은 %>% 이전의 결과를 나타낸다. 따라서 첫 번째 . 은 diamonds를 
+두 번째 . 는 head(diamonds, n=4) 의 결과를 나타낸다.
+```{r}
+library(magrittr)
+data(diamonds, package = "ggplot2")
+diamonds
+dim(diamonds)
+diamonds %>% head(. , n=4) %>% dim(.)
+
+
+diamonds %>% head(n=4) %>% dim(.)
+
+
+diamonds %>% head(n=4) %>% dim()
+
+diamonds %>% head(n=4) %>% dim
+
+```
+
+
+### Iteration : for loop
+for 반복문 (다중 반복문)
+다중 반복문에서 까다로운 문제 하나는 어떻게 깊은 꿈 속에서 깨어나는가 이다. 
+1) 여러번 break 를 반복한다
+2) 함수 안에서 return 을 쓴다
+```{r}
+for (i in 1:10) {
+  for (j in 1:10) {
+    for ( k in 1:10) {
+      if(i + j + k == 15) break }
+    if(i + j + k == 15) break }
+  if(i + j + k == 15) break }
+
+print(c(i,j,k))
+
+
+```
+
+Every for loop has three components:
+
+*The output*: output <- vector("double", length(x)). Before you start the loop, you must always allocate sufficient space for the output. This is very important for efficiency: if you grow the for loop at each iteration using c() (for example), your for loop will be very slow.
+
+A general way of creating an empty vector of given length is the vector() function. It has two arguments: the type of the vector (“logical”, “integer”, “double”, “character”, etc) and the length of the vector.
+
+*The sequence*: i in seq_along(df). This determines what to loop over: each run of the for loop will assign i to a different value from seq_along(df). It’s useful to think of i as a pronoun, like “it”.
+
+You might not have seen seq_along() before. It’s a safe version of the familiar 1:length(l), with an important difference: if you have a zero-length vector, seq_along() does the right thing:
+
+You probably won’t create a zero-length vector deliberately, but it’s easy to create them accidentally. If you use 1:length(x) instead of seq_along(x), you’re likely to get a confusing error message.
+
+*The body*: output[[i]] <- median(df[[i]]). This is the code that does the work. It’s run repeatedly, each time with a different value for i. The first iteration will run output[[1]] <- median(df[[1]]), the second will run output[[2]] <- median(df[[2]]), and so on.
+```{r}
+library(tidyverse)
+df <- tibble(
+  a = rnorm(10),
+  b = rnorm(10),
+  c = rnorm(10),
+  d = rnorm(10)
+)
+
+
+
+# We want to compute the median of each column. You could do with copy-and-paste: But that breaks our rule of thumb: never copy and paste more than twice. Instead, we could use a for loop:
+# nrow and ncol return the number of rows or columns
+
+output <- vector("double", ncol(df))  # 1. output present in x
+
+for (i in seq_along(df)) {            # 2. sequence
+  
+  output[[i]] <- median(df[[i]])      # 3. body
+}
+
+output
+```
+*seq_along()*  seq_along() generates a sequence the same length of the argument passed, and in the context of a for loop is used to more easily generate the index to iterate over,
+
+
+```{r}
+x <- runif(100)
+
+output <- vector("integer", 0)
+
+for (i in seq_along(x)) {
+  output <- c(output, lengths(x[[i]]))
+}
+
+output
+```
+
+
+Unknown output length, Sometimes you might not know how long the output will be
+```{r}
+means <- c(0, 1, 2)
+
+output <- double()
+
+for (i in seq_along(means)) {
+  n <- sample(100, 1)
+  output <- c(output, rnorm(n, means[[i]]))
+}
+
+str(output)
+
+# But this is not very efficient because in each iteration, R has to copy all the data from the previous iterations. A better solution to save the results in a list, and then combine into a single vector after the loop is done:
+
+out <- vector("list", length(means))
+
+for (i in seq_along(means)) {
+  n <- sample(100, 1)
+  out[[i]] <- rnorm(n, means[[i]])
+}
+
+str(out)
+
+str(unlist(out)) # Here I’ve used unlist() to flatten a list of vectors into a single vector
+``` 
+
+
+```{r}
+
+library(XML)
+df<-readHTMLTable("http://lol.inven.co.kr/dataninfo/match/playerList.php", header=T)
+str(df)
+View(df)
+df_list <- df[[2]]
+
+df_list <- df_list[, -c(1,2,5)] # 변수(column 필요없는거 날리기)
+
+names(df_list) <- c("name", "champ", "result", "k", "d", "a", "kda", "help") # 변수 이름 바꾸기
+
+df_list
+str(df_list)
+
+df_list[, 4:7] <- sapply(df_list[, 4:7], function(b){as.numeric(as.character(b))})
+# 주의! 숫자처럼 보이는 변수라도 factor로 인식되어 있는 경우에는 반드시 character 형으로 변경한 후 numeric로 변경해야 합니다
+
+df_list$name <- as.character((df_list$name))
+df_list$help <- as.numeric(sub("%", "", df_list$help))/100
+# 기호가 붙어 있는 변수를 숫자로 바꾸기 위해서는 % 기호를 제거해야함, sub 함수를 사용하고 100으로 나누면 쉽게 수치형으로 바꿀 수 있음.
+str(df_list)
+View(df_list)
+```
+
+```{r}
+# name 변수를 보면 팀명과 선수명이 하나의 컬럼에 속해 있다. 쪼개보자
+
+temp <- as.data.frame(do.call(rbind, strsplit(df_list$name, ' (?=[^ ]+$)', perl=TRUE)))
+# do.call : Execute a Function Call. 
+# do.call takes a function as input and splatters its other arguments to the function. It is widely used, for example, to assemble lists into simpler structures (often with rbind or cbind).
+ 
+
+df_list$name<-temp$V2
+df_list$team<-temp$V1
+View(df_list)
+```
+
+```{r}
+one <- mtcars[1:4, ]
+two <- mtcars[11:14, ]
+
+bind_rows(one, two)
+bind_rows(list(one, two))
+
+# 리스트로 되어 있는 경우, list,1,2,3.... 막 여러개 있는데 이거 전부 rbind 또는 cbind 로 묶고 싶으면,
+# do.call(rbind, 리스트 이름 ) 실행하면 리스트 전부 합쳐진다. 
+ls <- list(one,two)
+do.call(rbind, ls)
+
+
+
+
+```
+"..." 
+There is a special argument called *...* . This argument will match any arguments not otherwise matched, and can be easily passed on to other functions. This is useful if you want to collect arguments to call another function, but you don’t want to prespecify their possible names. ... is often used in conjunction with S3 generic functions to allow individual methods to be more flexible.
+
+
+### Composing Functions
+```{r}
+# defining a function fahrenheit_to_celsius that converts temperatures from Fahrenheit to Celsius
+
+fahrenheit_to_celsius <- function(temp_F) {
+  temp_C <- (temp_F - 32) * 5 / 9
+  return(temp_C)
+}
+
+fahrenheit_to_celsius(32)
+fahrenheit_to_celsius(212)
+
+
+celsius_to_kelvin <- function(temp_C) {
+  temp_K <- temp_C + 273.15
+  return(temp_K)
+}
+
+# freezing point of water in Kelvin
+celsius_to_kelvin(0)
+
+
+fahrenheit_to_kelvin <- function(temp_F) {
+  temp_C <- fahrenheit_to_celsius(temp_F)
+  temp_K <- celsius_to_kelvin(temp_C)
+  return(temp_K)
+}
+
+# freezing point of water in Kelvin
+fahrenheit_to_kelvin(32.0)
+
+
+
+# freezing point of water in Fahrenheit
+celsius_to_kelvin(fahrenheit_to_celsius(32.0))
+
+
+square_and_add <- function(x, y=1) {
+  x^2 + y
+}
+
+square_and_add(2,3)
+```
+
+```{r}
+
+
+```
+
+
