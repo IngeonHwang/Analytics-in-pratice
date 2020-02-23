@@ -1,0 +1,164 @@
+---
+title: 'Gender Pay Gap: `dplyr` workshop'
+author: Neil Stewart
+#date: '`r format(Sys.time(), "%d %B %Y")`'
+bibliography: module_refs.bib
+csl: https://www.zotero.org/styles/harvard-cite-them-right
+output: 
+   html_document:
+    toc: true
+    toc_depth: 3 
+---
+---
+
+```{r setup}
+library(tidyverse)
+library(lubridate)
+options(width=100)
+```
+
+---
+
+# Week 2 Workshop
+
+In this workshop we will work on some data on the gender pay gap from the UK Government. Use functions from the dplyr library from the tidyverse (and avoid base functions and data.tables for now)
+
+Data are from [https://data.gov.uk/dataset/54219db1-dd98-49d9-a383-a5978bb0aeb9/gender-pay-gap](https://data.gov.uk/dataset/54219db1-dd98-49d9-a383-a5978bb0aeb9/gender-pay-gap)
+
+
+## Tasks for today
+
+1. Make a new RStudio project for this workshop
+2. Make an RMarkdown document to record, and be able to reproduce, everything you do
+3. Use dplyr functions to read in the data from CSV format and make a tibble
+4. What does one row of the data represent?
+5. Make a data-dictionary table, to record your understanding of what each variable actually is. (Hint, the [RMarkdown Cheat Sheet](https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf) has information on making tables)
+
+For questions 6--10, write a plain-English sentence describing the pattern of the results
+
+6. Averaging across employers, what is the mean difference between male and female hourly pay? (Hint, the answer is 14.3%)
+7. Find the entry for Vodafone Group. What is the pay gap at Vodafone Group? Use the quartile information to sketch the distributions of pay for males and females
+8. Are public sector employers better than businesses or charities? Use DueDate as indicator of type---public sector employers submitted 31 March whereas businesses and charities submitted 5 April. (Hint: `lubridate` is your friend here)
+9. Is the pay gap worse for employers submitting late?
+10. Does changing name predict pay gap? 
+
+Finally, check you can knit your Rmarkdown document to produce an HTML file documenting everything you have done
+
+## Learning objectives for today
+
+1. Know how to make a new RStudio project and organise files
+2. Know the very basics of RMarkdown
+3. Practice using `dplyr`
+
+
+---
+
+
+```{r}
+pay.gap <- read_csv("UK_gender_pay_gap_2017-18.csv")
+```
+
+---
+
+# Data Dictionary
+
+Data are from [https://data.gov.uk/dataset/54219db1-dd98-49d9-a383-a5978bb0aeb9/gender-pay-gap](https://data.gov.uk/dataset/54219db1-dd98-49d9-a383-a5978bb0aeb9/gender-pay-gap)
+
+"The gender pay gap is the difference between the average earnings of men and women, expressed relative to men’s earnings. For example, ‘women earn 15% less than men per hour’."
+
+Details are available at [https://www.gov.uk/guidance/gender-pay-gap-reporting-overview](https://www.gov.uk/guidance/gender-pay-gap-reporting-overview) with calculation details [https://www.gov.uk/guidance/gender-pay-gap-reporting-make-your-calculations](https://www.gov.uk/guidance/gender-pay-gap-reporting-make-your-calculations)
+
+
+Variable                  | Description                                                                 
+--------                  | ---------------------------------------------------------------------------------------
+EmployerName              | Employer name
+Address                   | Address
+CompanyNumber             | Number from Companies House
+SicCodes                  | Standard industrial classification of economic activities
+DiffMeanHourlyPercent     | As described at the above link: $\frac{male~mean - female~mean}{male~mean} \times 100\%$
+DiffMedianHourlyPercent   |
+DiffMeanBonusPercent      |
+DiffMedianBonusPercent    |
+MaleBonusPercent          | Percentage of males receiving a bonus
+FemaleBonusPercent        | 
+MaleLowerQuartile         | Percentage of lower quartile that are male
+FemaleLowerQuartile       | For each quartile, male and female percentages always sum to 100
+MaleLowerMiddleQuartile   |
+FemaleLowerMiddleQuartile |
+MaleUpperMiddleQuartile   |
+FemaleUpperMiddleQuartile |
+MaleTopQuartile           |
+FemaleTopQuartile         |
+CompanyLinkToGPGInfo      | URL to information on individual company web sites
+ResponsiblePerson         | Person responsible, often the Managing Director
+EmployerSize              | Character string with range of number of employees e.g., "500 to 999"
+CurrentName               | Matches EmployerName for all but 2%
+SubmittedAfterTheDeadline | Boolean; 6% of companies submitted after the deadline
+DueDate                   | Either 31 March 2018 (public sector) or 5 April 2018 (businesses and charities)
+DateSubmitted             | Date and time submitted; no missing data
+
+---
+
+# Mean hourly pay gap
+
+```{r}
+pay.gap %>% summarise(mean(DiffMeanHourlyPercent))
+```
+
+The mean hourly pay for females is 14.3% lower than for males
+
+---
+
+# Vodafone pay gap
+
+First I search for all rows with Vodafone in them. `grepl()` is great for searching text fields, and is very, very powerful. Then, having found the right string to search for, I extract only the relevant row. Note using `print()` as a trick to print the whole `tibble`
+
+```{r}
+pay.gap %>% filter(grepl("VODAFONE", EmployerName))
+pay.gap %>% filter(EmployerName=="VODAFONE GROUP SERVICES LIMITED") %>% print(width=1000)
+```
+
+The gender pay gap for Vodafone is 14.6%
+
+---
+
+# Are public sector employers better than businesses or charities?
+
+First I add an extra column called `Sector` indicating whether the employer is public sector or business / charity using `mutate()`. Then I use `group_by()` to split the data by `Sector` and `summarise()` to produce counts and means for each sector
+
+`dmy_hms()` and `ymd()` are from the library `lubridate`, which is the best way, by far, to work with dates and times in R. See the [dates and times chapter](http://r4ds.had.co.nz/dates-and-times.html) in @WickhamGrolemund16
+
+```{r}
+pay.gap <- mutate(pay.gap, DueDate=dmy_hms(DueDate), Sector=ifelse(DueDate==ymd("2018-03-31"), "Public Sector", "Business / Charity"))
+pay.gap %>% summarise(n())
+pay.gap %>% group_by(Sector) %>% summarise(frequency=n(), mean=mean(DiffMeanHourlyPercent))
+```
+
+The gender pay gap is larger for the public sector, at 14.9%, than for businesses or charities, where the gap is 14.2%
+
+---
+
+# Does submitting late predict pay gap?
+
+Again, here I use `group_by()` and `summarise()` together 
+
+```{r}
+pay.gap %>% group_by(SubmittedAfterTheDeadline) %>% summarise(frequency=n(), mean=mean(DiffMeanHourlyPercent))
+```
+
+Those employers submitting on time have a pay gap of 14.5%, but the 641 employers submitting late have a pay gap of 11.2%
+
+---
+
+# Does a change of employer name predict a worse pay gap?
+
+```{r}
+pay.gap <- mutate(pay.gap, NameChange=EmployerName!=CurrentName)
+pay.gap %>% group_by(NameChange) %>% summarise(frequency=n(), mean=mean(DiffMeanHourlyPercent))
+```
+
+The 178 employers that change their name have a pay gap of 15.7% compared to 14.3% for those employers who do not change their name
+
+---
+
+# References
